@@ -134,7 +134,7 @@ namespace DAL.Migrations
             migrationBuilder.InsertData(
                 table: "Users",
                 columns: new[] { "Id", "PasswordHash", "Role", "Salt", "Username" },
-                values: new object[] { 1, "VnbFBPW8hE74QFIPMCIt5wfFwkLOvh2grsspJwUKbUQ=", "Admin", "9Jex1nZv0GE9Z2BtvRg11w==", "admin" });
+                values: new object[] { 1, "DpUInvsczb/PKXvS/6Loq5ZExBf24FVu9+MIrJT49m4=", "Admin", "7RqYZEHT4CqsllVeyKjgoA==", "admin" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Individuals_CityId",
