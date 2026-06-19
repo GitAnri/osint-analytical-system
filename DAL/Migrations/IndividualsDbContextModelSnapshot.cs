@@ -208,9 +208,9 @@ namespace DAL.Migrations
                         new
                         {
                             Id = 1,
-                            PasswordHash = "VnbFBPW8hE74QFIPMCIt5wfFwkLOvh2grsspJwUKbUQ=",
+                            PasswordHash = "DpUInvsczb/PKXvS/6Loq5ZExBf24FVu9+MIrJT49m4=",
                             Role = "Admin",
-                            Salt = "9Jex1nZv0GE9Z2BtvRg11w==",
+                            Salt = "7RqYZEHT4CqsllVeyKjgoA==",
                             Username = "admin"
                         });
                 });

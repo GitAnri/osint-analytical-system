@@ -1,0 +1,246 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSINT Analytical Dashboard</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e2f;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: #2a2a40;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            border-bottom: 2px solid #ff4757;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border: none;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #ff4757;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+            button:hover {
+                background-color: #ff6b81;
+            }
+
+        #network {
+            width: 100%;
+            height: 500px;
+            background-color: #1e1e2f;
+            border: 1px solid #444;
+            border-radius: 8px;
+        }
+
+        .vuln {
+            color: #ff4757;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center;">🛡️ OSINT Collection & Analysis System</h1>
+
+    <div class="container">
+        <div class="panel">
+            <h2>1. Authorize</h2>
+            <input type="text" id="username" placeholder="Admin Username" value="admin">
+            <input type="password" id="password" placeholder="Password" value="Admin123!">
+            <button onclick="login()">Login & Get Token</button>
+
+            <hr style="border-color: #444; margin: 20px 0;">
+
+            <h2>2. Target Input</h2>
+            <input type="text" id="firstName" placeholder="Target First Name (e.g., Anri)">
+            <input type="text" id="lastName" placeholder="Target Last Name (e.g., Muradashvili)">
+            <button onclick="gatherAndReport()">Gather Intelligence & Analyze</button>
+        </div>
+
+        <div class="panel">
+            <h2>3. Target Analysis Report</h2>
+            <div id="reportData">
+                <p><i>Authorize and enter Target details to initiate scraping and analysis.</i></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" style="display: block; margin-top: 20px;">
+        <div class="panel">
+            <h2>4. Network Topology Visualization</h2>
+            <div id="network"></div>
+        </div>
+    </div>
+
+    <script>
+        let jwtToken = '';
+
+        async function login() {
+            try {
+                const usernameInput = document.getElementById('username').value;
+                const passwordInput = document.getElementById('password').value;
+
+                const res = await fetch('/api/Auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameInput, password: passwordInput })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.token) {
+                    jwtToken = data.token;
+                    alert("Authenticated successfully. Secure connection established.");
+                } else {
+                    alert("Authentication failed. Check the console for details.");
+                }
+            } catch (error) {
+                console.error("Login error:", error);
+                alert("A network error occurred. Is the API running?");
+            }
+        }
+
+        async function gatherAndReport() {
+            if (!jwtToken) {
+                alert("Please login first to satisfy authorization requirements.");
+                return;
+            }
+
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+
+            if (!firstName || !lastName) {
+                alert("First Name and Last Name are required.");
+                return;
+            }
+
+            document.getElementById('reportData').innerHTML = "<p><i>Initiating Scraping Sequence...</i></p>";
+
+            try {
+                const gatherRes = await fetch(`/api/analysis/gather?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+
+                if (!gatherRes.ok) {
+                    alert("Failed to gather intelligence.");
+                    return;
+                }
+
+                const gatherData = await gatherRes.json();
+                const newTargetId = gatherData.individualId;
+
+                document.getElementById('reportData').innerHTML = `<p><i>Intelligence Gathered (ID: ${newTargetId}). Generating Report...</i></p>`;
+                const reportRes = await fetch(`/api/analysis/${newTargetId}/report`, {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+
+                if (!reportRes.ok) {
+                    alert("Failed to generate report.");
+                    return;
+                }
+
+                const reportData = await reportRes.json();
+                const t = reportData.targetProfile;
+                let html = `
+                            <p><strong>Name:</strong> ${t.firstName} ${t.lastName} (${t.gender})</p>
+                            <p><strong>Personal No:</strong> ${t.personalNumber}</p>
+                            <p><strong>Source / Provenance:</strong> <a href="#" style="color:#70a1ff;">${t.sourceUrl || 'Manual Entry'}</a></p>
+                            <p><strong>Automated Risk Score:</strong> ${t.riskScore || 0}/100</p>
+                            <p><strong>Network Influence:</strong> ${reportData.networkInfluenceLevel} (${reportData.totalKnownConnections} edges)</p>
+                            <hr style="border-color: #444;">
+                            <h3>Flagged Vulnerabilities:</h3>
+                            <ul>${reportData.flaggedVulnerabilities.map(v => `<li class="vuln">${v}</li>`).join('') || '<li>None detected</li>'}</ul>
+                        `;
+                document.getElementById('reportData').innerHTML = html;
+
+                drawGraph(t);
+
+            } catch (error) {
+                console.error("Workflow error:", error);
+                alert("An error occurred during the gathering and reporting phase.");
+            }
+        }
+
+        function drawGraph(target) {
+            const container = document.getElementById('network');
+            let nodes = [
+                {
+                    id: `target_${target.id}`,
+                    label: `[TARGET]\n${target.firstName} ${target.lastName}`,
+                    color: { background: '#ff4757', border: '#c0392b', highlight: { background: '#ff6b81', border: '#e84118' } },
+                    shape: 'box', margin: 10, font: { color: 'white', bold: true, size: 16 }
+                }
+            ];
+
+            let edges = [];
+
+            if (target.relations) {
+                target.relations.forEach(rel => {
+                    const nodeId = `rel_person_${rel.relatedIndividualId}`;
+                    nodes.push({
+                        id: nodeId,
+                        label: rel.relatedPersonName,
+                        color: { background: '#70a1ff', border: '#1e90ff', highlight: { background: '#a4b0be', border: '#747d8c' } },
+                        shape: 'ellipse', font: { size: 14, color: '#2f3542' }
+                    });
+
+                    edges.push({
+                        from: `target_${target.id}`,
+                        to: nodeId,
+                        label: rel.relationType,
+                        font: { align: 'horizontal', size: 11, color: '#57606f', background: '#ffffff', strokeWidth: 0 },
+                        arrows: { to: { enabled: true, scaleFactor: 0.8 } },
+                        color: { color: '#a4b0be', highlight: '#747d8c' },
+                        length: 250
+                    });
+                });
+            }
+
+            const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+            const options = {
+                physics: {
+                    enabled: true, solver: 'barnesHut',
+                    barnesHut: { gravitationalConstant: -3000, centralGravity: 0.3, springLength: 200, springConstant: 0.04, damping: 0.09 },
+                    stabilization: { iterations: 150 }
+                },
+                interaction: { hover: true, tooltipDelay: 200 },
+                layout: { randomSeed: 42 }
+            };
+
+            new vis.Network(container, data, options);
+        }
+    </script>
+</body>
+</html>
