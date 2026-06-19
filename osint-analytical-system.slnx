@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Api/Api.csproj" />
+  <Project Path="Business/Business.csproj" />
+  <Project Path="DAL/DAL.csproj" />
+  <Project Path="Shared/Shared.csproj" />
+</Solution>
